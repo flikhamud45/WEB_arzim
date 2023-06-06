@@ -2,12 +2,12 @@ import flask
 from flask import Flask
 
 app = Flask(__name__)
-
+app.template_folder = "."
 
 @app.route('/')
 def hello():
     name = flask.request.args.get("name", "")
-    return f"hello {name}"
+    return flask.render_template("index.html", name=name)
 
 def main():
     app.run()

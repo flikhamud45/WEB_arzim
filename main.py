@@ -44,26 +44,41 @@ def check_user_for_login(mail, password) -> bool:
 def create_user(mail, password, first_name, last_name):
     get_from_database(f"INSERT INTO users VALUES ('{mail}', '{hashlib.sha256(password.encode()).hexdigest()}', '{first_name}', '{last_name}')")
 
+def get_name(mail) -> list:
+    data = get_from_database(f"SELECT mail, password, first_name, last_name from users where mail = '{mail}'")
+    return data[0][2:4]
+
 @app.route('/', methods = ['GET', 'POST'])
 def hello():
     if flask.request.method == "GET":
-        return flask.render_template("index.html")
+        return flask.render_template("index.html", tab=flask.request.args.get("tab"))
     elif flask.request.method == "POST":
         data = flask.request.form
         print(data)
         if "login_mail" in data:
             if check_user_for_login(data["login_mail"], data["password"]):
-                return "connected!"
+                resp = flask.make_response(flask.redirect("mainPage"))
+                resp.set_cookie("mail", data["login_mail"])
+                resp.set_cookie("pass", data["password"])
+                return resp
             else:
                 return "WRONG!!!!!"
         if check_exist_for_signin(data["mail"]):
             return "mail already exist"
         else:
             create_user(data["mail"], data["password"], data["first_name"], data["last_name"])
-            return "created!"
-        return flask.redirect("/")
+            return flask.redirect("/?tab=login")
+
     return "WHAT???"
 
+@app.route('/mainPage')
+def main_page():
+    mail = flask.request.cookies.get("mail")
+    password = flask.request.cookies.get("pass")
+    if check_user_for_login(mail, password):
+        return flask.render_template("connected.html", name=" ".join(get_name(mail)))
+    else:
+        return "Dont תעצבן אותי"
 
 def main():
     t = threading.Thread(target=database_handler)
